@@ -58,10 +58,6 @@ An **ExecutionResult** captures how many tests passed and any regressions introd
 | gemini-code | — | — | — | — |
 | copilot | — | — | — | — |
 
-## Venues
-
-- **DAI 2026** — Distributed AI workshop
-- **AAAI 2027** — Main track, AI for Software Engineering
 
 ## Citation
 
