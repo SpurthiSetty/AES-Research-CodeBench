@@ -19,3 +19,19 @@ predictions/*.jsonl
 logs/
 claude-code.smoke-*.json
 *.smoke-*.json
+
+# AES paper build artifacts
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.xdv
+paper/*.synctex.gz
+paper/main-review.pdf
+logs/aes/
+paper/*.brf
+# AES scaled sample also contains gold patches; commit only the id list
+data/swebench_aes30.jsonl

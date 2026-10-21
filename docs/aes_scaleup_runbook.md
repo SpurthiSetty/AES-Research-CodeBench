@@ -37,8 +37,16 @@ python scripts/prepare_swebench_sample.py --limit 30 --stratify-repo --seed 0 \
     --output data/swebench_aes30.jsonl
 ```
 
-It prints every task with its repo. Commit `data/swebench_aes30.jsonl` so the
-sample is fixed.
+It prints every task with its repo. The JSONL contains gold patches, so it stays
+out of git (see `.gitignore`). Commit only the id list so the sample is fixed:
+
+```bash
+python -c "import json; [print(json.loads(l)['task']['task_id']) for l in open('data/swebench_aes30.jsonl')]" \
+    > data/swebench_aes30_ids.txt
+git add data/swebench_aes30_ids.txt
+```
+
+Re-running step 1 with the same seed reproduces the same sample.
 
 ## 2. Dry run (no model calls; checks clones and worktrees)
 
