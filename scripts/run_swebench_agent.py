@@ -80,7 +80,22 @@ def main() -> None:
         "--keep-workspaces", action="store_true",
         help="Keep per-attempt worktrees for debugging",
     )
+    parser.add_argument(
+        "--shard", default=None,
+        help="Run one shard, e.g. 2/4. Shards split whole repos, so they can run in "
+             "parallel terminals. Afterwards rerun once without --shard and with "
+             "--resume to write merged prediction files.",
+    )
+    parser.add_argument(
+        "--merge-only", action="store_true",
+        help="Write merged prediction files from recorded attempts without running the agent; "
+             "fails if any attempt is missing",
+    )
     args = parser.parse_args()
+
+    shard = num_shards = None
+    if args.shard:
+        shard, num_shards = (int(x) for x in args.shard.split("/"))
 
     prediction_files = run_swebench_attempts(
         sample_path=args.sample,
@@ -95,6 +110,9 @@ def main() -> None:
         resume=args.resume,
         keep_workspaces=args.keep_workspaces,
         git_base_url=args.git_base_url,
+        shard=shard,
+        num_shards=num_shards,
+        merge_only=args.merge_only,
     )
     print(f"Run '{args.run_name}' complete: {len(prediction_files)} prediction file(s)")
     for attempt, path in sorted(prediction_files.items()):

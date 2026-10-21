@@ -164,11 +164,61 @@ def agent_prompt_payload(instance: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def stratified_sample(
+    instances: List[Dict[str, Any]],
+    n: int,
+    seed: int = 0,
+    max_per_repo: Optional[int] = None,
+    exclude_ids: Optional[Iterable[str]] = None,
+) -> List[Dict[str, Any]]:
+    """Seeded, repo-stratified sample of ``n`` instances.
+
+    Instances are shuffled within each repo (seeded), then drawn round-robin
+    across repos in sorted order, so every repo contributes before any repo
+    contributes twice. ``max_per_repo`` caps any single repo; ``exclude_ids``
+    removes instances (e.g. an earlier pilot) before sampling.
+    """
+    import random
+
+    if n < 1:
+        raise ValueError(f"n must be >= 1, got {n}")
+    excluded = set(exclude_ids or ())
+    by_repo: Dict[str, List[Dict[str, Any]]] = {}
+    for inst in instances:
+        if inst["instance_id"] in excluded:
+            continue
+        by_repo.setdefault(inst["repo"], []).append(inst)
+    rng = random.Random(seed)
+    for repo in sorted(by_repo):
+        by_repo[repo].sort(key=lambda x: x["instance_id"])
+        rng.shuffle(by_repo[repo])
+    chosen: List[Dict[str, Any]] = []
+    depth = 0
+    while len(chosen) < n:
+        added = False
+        for repo in sorted(by_repo):
+            if max_per_repo is not None and depth >= max_per_repo:
+                continue
+            if depth < len(by_repo[repo]):
+                chosen.append(by_repo[repo][depth])
+                added = True
+                if len(chosen) >= n:
+                    break
+        if not added:
+            break
+        depth += 1
+    return chosen
+
+
 def write_swebench_sample(
     output_path: Union[str, Path],
     limit: int = 5,
     difficulty: Optional[Union[str, TaskDifficulty]] = None,
     split: str = "test",
+    stratify_repo: bool = False,
+    seed: int = 0,
+    max_per_repo: Optional[int] = None,
+    exclude_ids: Optional[Iterable[str]] = None,
 ) -> List[Dict[str, Any]]:
     """Sample SWE-bench Verified and write a JSONL task file.
 
@@ -177,9 +227,20 @@ def write_swebench_sample(
     repo, and a clearly-marked ``hidden_reference`` block with gold data for
     internal sanity checks only.
 
+    With ``stratify_repo=True`` the sample is drawn with
+    :func:`stratified_sample` instead of taking the first ``limit`` rows.
+
     Returns the written records.
     """
-    instances = load_swebench_verified(split=split, limit=limit, difficulty=difficulty)
+    if stratify_repo:
+        pool = load_swebench_verified(split=split, limit=None, difficulty=difficulty)
+        instances = stratified_sample(
+            pool, limit, seed=seed, max_per_repo=max_per_repo, exclude_ids=exclude_ids
+        )
+    else:
+        instances = load_swebench_verified(split=split, limit=limit, difficulty=difficulty)
+        if exclude_ids:
+            raise ValueError("exclude_ids requires stratify_repo=True")
     records: List[Dict[str, Any]] = []
     for instance in instances:
         task = swebench_instance_to_codetask(instance)

@@ -293,6 +293,27 @@ def _run_single_attempt(
     return record
 
 
+def shard_tasks(tasks: List[AgentSafeTask], shard: int, num_shards: int) -> List[AgentSafeTask]:
+    """Return the tasks for ``shard`` (1-based) of ``num_shards``.
+
+    Whole repos are assigned to shards (greedy, largest repo first), so two
+    shards never share a repo clone or create worktrees in the same repo
+    concurrently.
+    """
+    if num_shards < 1 or not 1 <= shard <= num_shards:
+        raise ValueError(f"invalid shard {shard}/{num_shards}")
+    counts: Dict[str, int] = {}
+    for t in tasks:
+        counts[t.repo] = counts.get(t.repo, 0) + 1
+    load = [0] * num_shards
+    owner: Dict[str, int] = {}
+    for repo in sorted(counts, key=lambda r: (-counts[r], r)):
+        i = min(range(num_shards), key=lambda j: (load[j], j))
+        owner[repo] = i + 1
+        load[i] += counts[repo]
+    return [t for t in tasks if owner[t.repo] == shard]
+
+
 def run_swebench_attempts(
     sample_path: Union[str, Path],
     agent_cmd: str,
@@ -306,8 +327,16 @@ def run_swebench_attempts(
     resume: bool = False,
     keep_workspaces: bool = False,
     git_base_url: str = DEFAULT_GIT_BASE_URL,
+    shard: Optional[int] = None,
+    num_shards: Optional[int] = None,
+    merge_only: bool = False,
 ) -> Dict[int, Path]:
     """Run ``attempts`` independent agent attempts per sampled task.
+
+    With ``shard``/``num_shards`` only that shard's tasks are run and the
+    prediction files get a ``_s{shard}of{num_shards}`` suffix. After all
+    shards finish, rerun without a shard and with ``resume=True`` to write
+    the merged prediction files from the recorded attempts.
 
     Returns a mapping of attempt index -> written predictions JSONL path
     (one file per attempt, in the official SWE-bench prediction format).
@@ -318,10 +347,32 @@ def run_swebench_attempts(
     tasks = load_agent_safe_tasks(sample_path)
     if not tasks:
         raise ValueError(f"No tasks found in {sample_path}")
+    suffix = ""
+    if shard is not None or num_shards is not None:
+        if shard is None or num_shards is None:
+            raise ValueError("shard and num_shards must be given together")
+        tasks = shard_tasks(tasks, shard, num_shards)
+        suffix = f"_s{shard}of{num_shards}"
+        if not tasks:
+            raise ValueError(f"Shard {shard}/{num_shards} has no tasks")
+
+    if merge_only:
+        missing = [
+            f"{t.task_id} attempt {a}"
+            for t in tasks
+            for a in range(1, attempts + 1)
+            if not (Path(attempts_dir) / run_name / t.task_id / f"attempt-{a}" / "meta.json").exists()
+        ]
+        if missing:
+            raise RuntimeError(
+                f"merge_only: {len(missing)} attempt(s) not recorded yet; finish the shards first:\n  "
+                + "\n  ".join(missing)
+            )
+        resume = True
 
     records: Dict[int, List[AttemptRecord]] = {k: [] for k in range(1, attempts + 1)}
     for task in tasks:
-        clone_path = ensure_repo_clone(task.repo, workspaces_dir, git_base_url)
+        clone_path = None if merge_only else ensure_repo_clone(task.repo, workspaces_dir, git_base_url)
         for attempt in range(1, attempts + 1):
             record_dir = Path(attempts_dir) / run_name / task.task_id / f"attempt-{attempt}"
             meta_path = record_dir / "meta.json"
@@ -357,6 +408,6 @@ def run_swebench_attempts(
             }
             for r in attempt_records
         ]
-        out = Path(predictions_dir) / f"{run_name}_attempt{attempt}.jsonl"
+        out = Path(predictions_dir) / f"{run_name}{suffix}_attempt{attempt}.jsonl"
         prediction_files[attempt] = write_predictions_jsonl(predictions, out)
     return prediction_files

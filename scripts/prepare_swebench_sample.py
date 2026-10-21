@@ -8,6 +8,11 @@ Usage:
     python scripts/prepare_swebench_sample.py
     python scripts/prepare_swebench_sample.py --limit 30 --difficulty easy
     python scripts/prepare_swebench_sample.py --limit 50 --output data/my_sample.jsonl
+
+    # repo-stratified, seeded sample that skips an earlier pilot
+    python scripts/prepare_swebench_sample.py --limit 30 --stratify-repo --seed 0 \
+        --max-per-repo 4 --exclude-ids-from data/swebench_verified_sample.jsonl \
+        --output data/swebench_aes30.jsonl
 """
 
 import argparse
@@ -46,13 +51,39 @@ def main() -> None:
         default="test",
         help="Dataset split (default: test)",
     )
+    parser.add_argument(
+        "--stratify-repo", action="store_true",
+        help="Draw a seeded sample round-robin across repos instead of the first N rows",
+    )
+    parser.add_argument("--seed", type=int, default=0, help="Seed for --stratify-repo")
+    parser.add_argument(
+        "--max-per-repo", type=int, default=None,
+        help="Cap tasks per repo (with --stratify-repo)",
+    )
+    parser.add_argument(
+        "--exclude-ids-from", default=None,
+        help="Sample JSONL whose task ids are excluded (e.g. the 5-task pilot)",
+    )
+    parser.add_argument(
+        "--exclude-ids", nargs="*", default=None,
+        help="Instance ids to exclude (with --stratify-repo)",
+    )
     args = parser.parse_args()
 
+    exclude = list(args.exclude_ids or [])
+    if args.exclude_ids_from:
+        from codebench.swebench_adapter import read_swebench_sample
+        exclude += [r["task"]["task_id"] for r in read_swebench_sample(args.exclude_ids_from)]
+    exclude = exclude or None
     records = write_swebench_sample(
         output_path=args.output,
         limit=args.limit,
         difficulty=args.difficulty,
         split=args.split,
+        stratify_repo=args.stratify_repo,
+        seed=args.seed,
+        max_per_repo=args.max_per_repo,
+        exclude_ids=exclude,
     )
     print(f"Wrote {len(records)} SWE-bench Verified tasks to {os.path.abspath(args.output)}")
     for record in records:
