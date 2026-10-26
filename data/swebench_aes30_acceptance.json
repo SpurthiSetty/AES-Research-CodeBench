@@ -1,0 +1,116 @@
+{
+  "n_tasks": 30,
+  "attempts": 3,
+  "k": 3,
+  "repos": [
+    "astropy/astropy",
+    "django/django",
+    "matplotlib/matplotlib",
+    "mwaskom/seaborn",
+    "pallets/flask",
+    "psf/requests",
+    "pydata/xarray",
+    "pylint-dev/pylint",
+    "pytest-dev/pytest",
+    "scikit-learn/scikit-learn",
+    "sphinx-doc/sphinx",
+    "sympy/sympy"
+  ],
+  "configs": {
+    "sonnet": {
+      "model_name": "cc-sonnet",
+      "run_prefix": "aes-sonnet",
+      "agent_cost_usd": {
+        "total": 9.4616407,
+        "runs_with_cost": 90,
+        "mean_per_run": 0.10512934111111111
+      },
+      "agent_models_seen": [
+        "claude-sonnet-5-5"
+      ],
+      "n_rollouts": 90,
+      "n_with_report": 86,
+      "failure_profile": {
+        "resolved": 62,
+        "fixed_but_regressed": 4,
+        "missed_clean": 16,
+        "missed_regressed": 4,
+        "no_patch": 4,
+        "harness_error": 0
+      },
+      "harness_errors": [],
+      "partial_credit_test_pass_rate": {
+        "macro_over_rollouts_with_report": 0.992208105225553,
+        "pooled": 0.9926040476030391
+      },
+      "f2p": {
+        "accepted_rollouts": 66,
+        "rel@1": 0.7333333333333333,
+        "rel@1_ci_task_bootstrap": [
+          0.5888888888888889,
+          0.8666666666666667
+        ],
+        "rel@1_ci_wilson_rollouts": [
+          0.6337996218328292,
+          0.8137630795703863
+        ],
+        "rel@3": 0.8333333333333334,
+        "rel@3_ci": [
+          0.7,
+          0.9666666666666667
+        ],
+        "pass^3": 0.6,
+        "pass^3_ci": [
+          0.43333333333333335,
+          0.7666666666666667
+        ],
+        "tasks_solved_at_least_once": 25
+      },
+      "resolved": {
+        "accepted_rollouts": 62,
+        "rel@1": 0.6888888888888889,
+        "rel@1_ci_task_bootstrap": [
+          0.5444444444444444,
+          0.8222222222222223
+        ],
+        "rel@1_ci_wilson_rollouts": [
+          0.5871698145125097,
+          0.7751428485281886
+        ],
+        "rel@3": 0.8,
+        "rel@3_ci": [
+          0.6666666666666666,
+          0.9333333333333333
+        ],
+        "pass^3": 0.5333333333333333,
+        "pass^3_ci": [
+          0.36666666666666664,
+          0.7
+        ],
+        "tasks_solved_at_least_once": 24
+      },
+      "per_repo_resolved_rel@1": {
+        "astropy/astropy": 1.0,
+        "django/django": 0.5555555555555555,
+        "matplotlib/matplotlib": 0.3333333333333333,
+        "mwaskom/seaborn": 0.6666666666666666,
+        "pallets/flask": 1.0,
+        "psf/requests": 0.6666666666666666,
+        "pydata/xarray": 0.7777777777777777,
+        "pylint-dev/pylint": 0.2222222222222222,
+        "pytest-dev/pytest": 0.6666666666666666,
+        "scikit-learn/scikit-learn": 1.0,
+        "sphinx-doc/sphinx": 0.8333333333333333,
+        "sympy/sympy": 1.0
+      }
+    }
+  },
+  "rankings": {
+    "f2p": [
+      "sonnet"
+    ],
+    "resolved": [
+      "sonnet"
+    ]
+  }
+}

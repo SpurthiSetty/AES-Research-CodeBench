@@ -66,6 +66,21 @@ def main(path: str) -> None:
             macros.append(f"\\newcommand{{\\{macro_name(label, ev, 'relone')}}}{{{e['rel@1']:.3f}}}")
             macros.append(f"\\newcommand{{\\{macro_name(label, ev, 'relk')}}}{{{e[f'rel@{k}']:.3f}}}")
             macros.append(f"\\newcommand{{\\{macro_name(label, ev, 'passk')}}}{{{e[f'pass^{k}']:.3f}}}")
+            for name, key in (("relone", "rel@1_ci_task_bootstrap"), ("relk", f"rel@{k}_ci"),
+                              ("passk", f"pass^{k}_ci")):
+                macros.append(f"\\newcommand{{\\{macro_name(label, ev, name, 'lo')}}}{{{e[key][0]:.2f}}}")
+                macros.append(f"\\newcommand{{\\{macro_name(label, ev, name, 'hi')}}}{{{e[key][1]:.2f}}}")
+            macros.append(f"\\newcommand{{\\{macro_name(label, ev, 'accepted')}}}{{{e['accepted_rollouts']}}}")
+            macros.append(f"\\newcommand{{\\{macro_name(label, ev, 'solved')}}}{{{e['tasks_solved_at_least_once']}}}")
+        for key, _ in PROFILE:
+            macros.append(f"\\newcommand{{\\{macro_name(label, 'profile', key)}}}{{{c['failure_profile'][key]}}}")
+        macros.append(f"\\newcommand{{\\{macro_name(label, 'rollouts')}}}{{{c['n_rollouts']}}}")
+        macros.append(f"\\newcommand{{\\{macro_name(label, 'harness errors')}}}{{{len(c['harness_errors'])}}}")
+        cost = c["agent_cost_usd"]
+        macros.append(f"\\newcommand{{\\{macro_name(label, 'cost total')}}}{{{cost['total']:.2f}}}")
+        macros.append(f"\\newcommand{{\\{macro_name(label, 'cost mean')}}}{{{cost['mean_per_run']:.2f}}}")
+        models = ", ".join(f"\\texttt{{{esc(m)}}}" for m in c["agent_models_seen"])
+        macros.append(f"\\newcommand{{\\{macro_name(label, 'models')}}}{{{models}}}")
         pc = c["partial_credit_test_pass_rate"]["macro_over_rollouts_with_report"]
         if pc is not None:
             macros.append(f"\\newcommand{{\\{macro_name(label, 'partial')}}}{{{pc:.3f}}}")

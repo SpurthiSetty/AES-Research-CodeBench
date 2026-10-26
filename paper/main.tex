@@ -10,6 +10,7 @@
 \newcommand{\SA}{S-Anote}
 \newcommand{\SC}{S-CC}
 \newcommand{\GPT}{GPT-4o}
+\input{generated/swebench_macros.tex}
 
 \title[Beyond Pass@k: Sampling Units and Acceptance Events]{Beyond Pass@k: Auditing Sampling Units and Acceptance Events in Coding-Agent Evaluation}
 
@@ -26,7 +27,7 @@
 \maketitle
 
 \begin{abstract}
-The pass@k estimator of \citet{chen2021codex} is unbiased only when its $n$ inputs are independent full attempts and its success event is the one the evaluator cares about. We audit both choices for coding agents. First, we inspect the pass@k code of eight public harnesses and find that all of them count independent samples or attempts; the test-count misapplication we originally reported came from our own earlier harness, so we present it as an audit risk rather than common practice. Against the closed-form ground truth of a synthetic benchmark, that misapplication overstates reliability@5 by $+0.76$ to $+0.92$, while the rollout estimator stays within $0.012$ of the truth. Second, we show that the acceptance event can decide a leaderboard. Rescoring 240 live generations from three model configurations, a binding zero-findings security predicate moves GPT-4o from first ($1.00$) to last ($0.70$) on reliability@5, and to $0.40$ on security-sensitive tasks. Excluding rollouts that call an LLM API instead of implementing the function puts it back in first place, because 135 of 160 Claude-backed rollouts delegated in this way and 70 of those passed the tests. We give a six-field reporting checklist for acceptance events and sampling units, and a regression-aware failure profile from a 5-task SWE-bench Verified pilot. All evidence is small-scale; intervals are wide and we report them.
+The pass@k estimator of \citet{chen2021codex} is unbiased only when its $n$ inputs are independent full attempts and its success event is the one the evaluator cares about. We audit both choices for coding agents. First, we inspect the pass@k code of eight public harnesses and find that all of them count independent samples or attempts; the test-count misapplication we originally reported came from our own earlier harness, so we present it as an audit risk rather than common practice. Against the closed-form ground truth of a synthetic benchmark, that misapplication overstates reliability@5 by $+0.76$ to $+0.92$, while the rollout estimator stays within $0.012$ of the truth. Second, we show that the acceptance event can decide a leaderboard. Rescoring 240 live generations from three model configurations, a binding zero-findings security predicate moves GPT-4o from first ($1.00$) to last ($0.70$) on reliability@5, and to $0.40$ on security-sensitive tasks. Excluding rollouts that call an LLM API instead of implementing the function puts it back in first place, because 135 of 160 Claude-backed rollouts delegated in this way and 70 of those passed the tests. We give a six-field reporting checklist for acceptance events and sampling units. On \sweSonnetRollouts{} Claude Code rollouts over \sweNTasks{} SWE-bench Verified tasks, single-attempt resolved reliability is \sweSonnetResolvedRelone{} but all-of-\sweAttempts{} consistency is \sweSonnetResolvedPassk{}, and a regression-aware failure profile shows that most failures miss the required change without breaking existing tests. All evidence is small-scale; intervals are wide and we report them.
 \end{abstract}
 
 \section{Introduction}
@@ -40,7 +41,7 @@ An earlier version of this work \citep{jiang2026beyond} argued that agentic harn
   \item \textbf{A harness audit} (\S\ref{sec:audit}). All eight public harnesses we inspected count independent samples or attempts. The test-count error lived in our own CodeBench v1 code, so we treat it as a risk to check for, not a field-wide practice. The audit also surfaces quieter differences in aggregation and estimators.
   \item \textbf{Correct estimands and a common-estimand comparison} (\S\ref{sec:estimand}). We separate single-attempt reliability $p$, any-of-$k$ reliability $1-(1-p)^k$, and all-of-$k$ consistency $p^k$, and score both estimators against the same closed-form ground truth.
   \item \textbf{The acceptance event decides the leaderboard} (\S\ref{sec:ladder}). Rescoring stored live rollouts under four predefined acceptance events reorders three configurations twice, exposes a bug in our earlier per-pair security check, and reveals LLM-API delegation that tests alone accepted.
-  \item \textbf{A regression-aware failure profile} (\S\ref{sec:swe}) from a 5-task SWE-bench Verified pilot, presented as a case study rather than an inflation estimate.
+  \item \textbf{Reliability and a regression-aware failure profile on SWE-bench Verified} (\S\ref{sec:swe}): $\relk{1}$, $\relk{\sweAttempts}$ and pass$^{\sweAttempts}$ with intervals for Claude Code on \sweNTasks{} tasks with \sweAttempts{} attempts each, under two acceptance events.
 \end{itemize}
 
 \section{What a Reliability Number Must Specify}
@@ -172,20 +173,37 @@ Under A0, \GPT{} leads ($1.000$). Under A1 it falls to last ($0.700$, against $0
 \paragraph{Relation to secure-pass@k.}
 DeepGuard's secure-pass@k already applies the Chen estimator to a joint functional-and-security success event \citep{huang2026deepguard}. A1 is the same construction, and we do not claim it as a new metric. Our point concerns specification. Whether the security predicate is checked per rollout, whether it binds at one finding, and what other conditions sit in the acceptance event each changed the ranking here. Industry reports of vulnerable AI-generated code that still passes functional tests \citep{veracode2025} motivate checking these choices.
 
-\section{Case Study: A Regression-Aware Failure Profile}
+\section{Case Study: Reliability and Failure Profile on SWE-bench}
 \label{sec:swe}
 
-We ran Claude Code CLI (v2.1.185, headless, \texttt{acceptEdits} mode, so no shell access or self-testing) once on each of the first five SWE-bench Verified test instances, all from \texttt{astropy}. Patches were scored with the official Docker harness. Leakage checks found no gold-patch content or hidden test names in any agent input. All five patches applied cleanly. One task was resolved, so $\widehat{\relk{1}}=0.20$ with a Wilson 95\% interval of $[0.04, 0.62]$. With one attempt per task, the pilot cannot estimate $\relk{k}$ for $k>1$. The earlier version contrasted this with a macro-averaged hidden-test pass rate of 0.80. That comparison mixes two estimands, so we report the failure profile instead. Two attempts preserved all existing tests but missed the required change (fail-to-pass tests 0/1 and 0/2, with 20/20 and 644/644 pass-to-pass tests intact). Two attempts broke previously passing behaviour: 5 regressions with 0/4 fail-to-pass, and 7 regressions with 0/1 (Appendix Table~\ref{tab:swe}). These two failure types matter differently in deployment, and a resolve rate merges them. We suggest reporting both counts beside $\relk{1}$.
+\paragraph{Setup.}
+We ran Claude Code CLI (v2.1.305, model \sweSonnetModels{}) headless in \texttt{acceptEdits} mode, so the agent can read and edit files but has no shell and cannot run tests. The sample is \sweNTasks{} SWE-bench Verified tasks drawn with one seed, stratified across \sweNRepos{} repositories, and excluding the five tasks of our earlier pilot (Appendix Table~\ref{tab:swe}). Each task received \sweAttempts{} independent attempts in fresh checkouts, \sweSonnetRollouts{} rollouts in all, scored with the official harness. The agent saw only the issue text, repository and base commit. Every rollout is counted, and \sweSonnetHarnessErrors{} harness errors remained. We had planned a second model and five attempts per task, but cut both to fit our compute budget. This section therefore compares acceptance events for one configuration and cannot test whether they reorder configurations. With \sweAttempts{} attempts we report $\relk{\sweAttempts}$ in place of $\relk{5}$.
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \input{generated/swebench_reliability.tex}
+  \par\medskip
+  \input{generated/swebench_profile.tex}
+  \caption{Claude Code on \sweNTasks{} SWE-bench Verified tasks, \sweAttempts{} attempts each. Top: reliability under fail-to-pass (F2P) and resolved acceptance, with 95\% task-bootstrap intervals. Bottom: outcome of each of the \sweSonnetRollouts{} rollouts.}
+  \label{tab:swerel}
+\end{table}
+
+\paragraph{Results.}
+Under F2P acceptance $\widehat{\relk{1}}=\sweSonnetFPRelone$ $[\sweSonnetFPReloneLo, \sweSonnetFPReloneHi]$, and under the official resolved event it is \sweSonnetResolvedRelone{} $[\sweSonnetResolvedReloneLo, \sweSonnetResolvedReloneHi]$ (Table~\ref{tab:swerel}). The gap is the \sweSonnetProfileFixedButRegressed{} rollouts that made the failing tests pass but broke a previously passing test. The intervals overlap almost entirely, so we do not claim that the two events differ for this configuration. The estimands differ more. At least one of three attempts resolved \sweSonnetResolvedSolved{} of the \sweNTasks{} tasks, giving $\relk{\sweAttempts}=\sweSonnetResolvedRelk$ $[\sweSonnetResolvedRelkLo, \sweSonnetResolvedRelkHi]$, but the share of tasks on which all three attempts resolved is only pass$^{\sweAttempts}=\sweSonnetResolvedPassk$ $[\sweSonnetResolvedPasskLo, \sweSonnetResolvedPasskHi]$. For an agent run once without a selector, $\relk{1}$ and pass$^k$ answer the operational question, and $\relk{k}$ alone would overstate it.
+
+\paragraph{Failure profile.}
+Of the \sweSonnetRollouts{} rollouts, \sweSonnetProfileMissedClean{} missed the required change while keeping every existing test passing, and \sweSonnetProfileMissedRegressed{} missed it and broke existing tests. The remaining \sweSonnetProfileNoPatch{} patches applied but crashed the test run, either by omitting a function the hidden tests import or by raising an error that stopped the test runner. The harness could not grade them, and we count them as failures. In this sample, an agent that cannot run tests fails mostly by under-fixing rather than by breaking behaviour. A resolve rate merges these failure types, which matter differently in deployment, so we suggest reporting the counts beside $\relk{1}$.
 
 \section{Limitations}
 \label{sec:limits}
 
-The audit covers eight harnesses at single commits and records how each computes its metric, not how leaderboards built on them are reported. The simulator results show how the estimators behave on a known data-generating process; they say nothing about production agents. The live-rollout study has 3 configurations and 10 tasks, so its intervals are wide, and two of the configurations share a model. Its security scanner matches 7 lexical patterns. It cannot see most vulnerability classes, and its regex for \texttt{eval} would also match the safe \texttt{literal\_eval} (we confirmed no such false positive in these data). Some security tasks invite flagged primitives in their specifications. The delegation check is also lexical, and A2 was defined after inspecting rollouts. The SWE-bench pilot has 5 tasks from one repository, one agent, one attempt each, and no shell access. We could not scale it before the deadline, and it is the main gap a full version must close.
+The audit covers eight harnesses at single commits and records how each computes its metric, not how leaderboards built on them are reported. The simulator results show how the estimators behave on a known data-generating process; they say nothing about production agents. The live-rollout study has 3 configurations and 10 tasks, so its intervals are wide, and two of the configurations share a model. Its security scanner matches 7 lexical patterns. It cannot see most vulnerability classes, and its regex for \texttt{eval} would also match the safe \texttt{literal\_eval} (we confirmed no such false positive in these data). Some security tasks invite flagged primitives in their specifications. The delegation check is also lexical, and A2 was defined after inspecting rollouts. The SWE-bench study uses one agent harness and one model, \sweNTasks{} tasks drawn with one sampling seed, \sweAttempts{} attempts per task, and \texttt{acceptEdits} mode with no shell. Its intervals are wide, and with one configuration it cannot show whether the acceptance event reorders configurations on SWE-bench. Its harness ran under x86\_64 emulation on Apple silicon.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-The estimator of \citet{chen2021codex} works when its inputs are independent attempts. The public harnesses we audited supply that, and our own earlier harness did not. The larger risk we found is quieter: the acceptance event. With no new generations, changing only that predicate reordered three configurations twice, exposed a per-pair bug in our own security adjustment, and revealed rollouts that passed tests by calling an LLM. We recommend that any reported reliability number state the six fields of \S\ref{sec:audit}, give $\relk{1}$ beside any $\relk{k}$, and attach uncertainty. Code, stored rollouts and rescoring scripts are at \url{https://github.com/anote-ai/research-codebench}.
+The estimator of \citet{chen2021codex} works when its inputs are independent attempts. The public harnesses we audited supply that, and our own earlier harness did not. The larger risk we found is quieter: the acceptance event. With no new generations, changing only that predicate reordered three configurations twice, exposed a per-pair bug in our own security adjustment, and revealed rollouts that passed tests by calling an LLM. On SWE-bench Verified, one Claude Code configuration has single-attempt resolved reliability \sweSonnetResolvedRelone{} but all-of-\sweAttempts{} consistency \sweSonnetResolvedPassk{}, and most of its failures left existing tests intact. We recommend that any reported reliability number state the six fields of \S\ref{sec:audit}, give $\relk{1}$ beside any $\relk{k}$, and attach uncertainty. Code, stored rollouts and rescoring scripts are at \url{https://github.com/anote-ai/research-codebench}.
 
 \aesbackmattersection{Prior Version}
 An earlier version of this work is available as \citet{jiang2026beyond}. This version replaces its central empirical claims as described in \S\ref{sec:intro}.
@@ -207,19 +225,22 @@ LLM coding agents are the subjects of the evaluation. Generative AI tools also a
   \small
   \begin{tabularx}{\linewidth}{@{}l X X X@{}}
     \toprule
-    Field & \S\ref{sec:estimand} simulator & \S\ref{sec:ladder} live rollouts & \S\ref{sec:swe} SWE-bench pilot \\
+    Field & \S\ref{sec:estimand} simulator & \S\ref{sec:ladder} live rollouts & \S\ref{sec:swe} SWE-bench \\
     \midrule
-    Sampling unit & simulated rollout & one API generation & one agent run \\
-    Acceptance event & pass rate $\ge 0.95$ & A0--A3 (\S\ref{sec:ladder}) & all F2P and P2P pass \\
-    Trials per task $n$ & 8 or 20 & 8 & 1 \\
-    Retry count $k$ & 5 (and 1) & 5 and 1 & 1 \\
-    Aggregation & macro over pairs & macro over 10 tasks & over 5 tasks \\
-    Uncertainty & bias, MAE; bootstrap CI for $\rho$ & task bootstrap (10{,}000) & Wilson interval \\
+    Sampling unit & simulated rollout & one API generation & one Claude Code run \\
+    Acceptance event & pass rate $\ge 0.95$ & A0--A3 (\S\ref{sec:ladder}) & F2P pass; resolved (all F2P and P2P pass) \\
+    Trials per task $n$ & 8 or 20 & 8 & \sweAttempts \\
+    Retry count $k$ & 5 (and 1) & 5 and 1 & 1 and \sweAttempts{} (pass$^{\sweAttempts}$) \\
+    Aggregation & macro over pairs & macro over 10 tasks & macro over \sweNTasks{} tasks (\sweNRepos{} repos) \\
+    Uncertainty & bias, MAE; bootstrap CI for $\rho$ & task bootstrap (10{,}000) & task bootstrap (10{,}000) \\
     \bottomrule
   \end{tabularx}
   \caption{The six reporting fields of \S\ref{sec:audit} for each study in this paper.}
   \label{tab:protocol}
 \end{table}
+
+\paragraph{SWE-bench run details.}
+Agent: Claude Code CLI v2.1.305 (\texttt{claude -p}, \texttt{--permission-mode acceptEdits}, \texttt{--model sonnet}), resolved to model id \sweSonnetModels{} in every rollout. Each attempt had a 1800\,s timeout and a \$5 budget cap; no attempt reached either, and agent cost was \$\sweSonnetCostTotal{} in total. Tasks were drawn by \texttt{scripts/prepare\_swebench\_sample.py} with seed 0, stratified by repository with at most four per repository, excluding the pilot tasks; the task ids are in \nolinkurl{data/swebench_aes30_ids.txt}. Scoring used the official harness (\texttt{swebench} 5.0.2) with the published x86\_64 evaluation images, run under emulation on an Apple-silicon Mac. Three attempts on one task failed within seconds on an account usage limit before the model did any work; we set those records aside and re-ran them, and the logs record this. No other attempt was re-run.
 
 \section{Additional Results}
 \label{app:results}
@@ -260,7 +281,7 @@ LLM coding agents are the subjects of the evaluation. Generative AI tools also a
     astropy\_\_astropy-13453 & medium & no & 0/1 & 2/9 & 7 \\
     \bottomrule
   \end{tabularx}
-  \caption{SWE-bench Verified pilot, one attempt per instance. F2P and P2P give passed/total hidden fail-to-pass and pass-to-pass tests.}
+  \caption{Earlier SWE-bench Verified pilot, not part of the \S\ref{sec:swe} sample: Claude Code v2.1.185 in \texttt{acceptEdits} mode, one attempt on each of the first five Verified instances. One was resolved ($\widehat{\relk{1}}=0.20$, Wilson 95\% interval $[0.04, 0.62]$). F2P and P2P give passed/total hidden fail-to-pass and pass-to-pass tests.}
   \label{tab:swe}
 \end{table}
 
