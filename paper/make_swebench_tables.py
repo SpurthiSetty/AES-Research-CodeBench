@@ -53,7 +53,7 @@ def main(path: str) -> None:
         fp = c["failure_profile"]
         prow.append(esc(label) + " & " + " & ".join(str(fp[key]) for key, _ in PROFILE) + " \\\\")
     (OUT / "swebench_profile.tex").write_text(
-        "\\begin{tabularx}{\\linewidth}{@{}X " + "c" * len(PROFILE) + "@{}}\n\\toprule\n"
+        "\\begin{tabularx}{\\linewidth}{@{}l " + ">{\\centering\\arraybackslash}X" * len(PROFILE) + "@{}}\n\\toprule\n"
         "Config & " + " & ".join(n for _, n in PROFILE) + " \\\\\n\\midrule\n"
         + "\n".join(prow) + "\n\\bottomrule\n\\end{tabularx}\n")
 
