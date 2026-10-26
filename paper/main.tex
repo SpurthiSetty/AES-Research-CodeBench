@@ -14,12 +14,12 @@
 
 \title[Beyond Pass@k: Sampling Units and Acceptance Events]{Beyond Pass@k: Auditing Sampling Units and Acceptance Events in Coding-Agent Evaluation}
 
-% TODO(authors): confirm author order, affiliations and contact email before submitting.
 \aesauthor[affil={1}]{Jiajun Jiang}
 \aesauthor[affil={1}]{Sharon Zheng}
+\aesauthor[affil={1,2},corresponding]{Spurthi Setty}
 \aesauthor[affil={1}]{Natan Vidra}
-\aesauthor[affil={1},corresponding]{Spurthi Setty}
 \aesaffiliation{1}{Anote AI}
+\aesaffiliation{2}{Stevens Institute of Technology}
 
 \aeskeywords{Agent evaluation; pass@k; Reliability; Code security; Benchmark auditing}
 
@@ -177,7 +177,7 @@ DeepGuard's secure-pass@k already applies the Chen estimator to a joint function
 \label{sec:swe}
 
 \paragraph{Setup.}
-We ran Claude Code CLI (v2.1.305, model \sweSonnetModels{}) headless in \texttt{acceptEdits} mode, so the agent can read and edit files but has no shell and cannot run tests. The sample is \sweNTasks{} SWE-bench Verified tasks drawn with one seed, stratified across \sweNRepos{} repositories, and excluding the five tasks of our earlier pilot (Appendix Table~\ref{tab:swe}). Each task received \sweAttempts{} independent attempts in fresh checkouts, \sweSonnetRollouts{} rollouts in all, scored with the official harness. The agent saw only the issue text, repository and base commit. Every rollout is counted, and \sweSonnetHarnessErrors{} harness errors remained. We had planned a second model and five attempts per task, but cut both to fit our compute budget. This section therefore compares acceptance events for one configuration and cannot test whether they reorder configurations. With \sweAttempts{} attempts we report $\relk{\sweAttempts}$ in place of $\relk{5}$.
+We ran Claude Code CLI (v2.1.305, model \sweSonnetModels{}) headless in \texttt{acceptEdits} mode, so the agent can read and edit files but has no shell and cannot run tests. The sample is \sweNTasks{} SWE-bench Verified tasks drawn with one seed, stratified across \sweNRepos{} repositories, and excluding the five tasks of our earlier pilot (Appendix Table~\ref{tab:swe}). Each task received \sweAttempts{} independent attempts in fresh checkouts, \sweSonnetRollouts{} rollouts in all, scored with the official harness. The agent saw only the issue text, repository and base commit. Every rollout is counted, and \sweSonnetHarnessErrors{} harness errors remained. We had planned a second model and five attempts per task, but cut both because of account usage limits and the time remaining before the deadline. This section therefore compares acceptance events for one configuration and cannot test whether they reorder configurations. With \sweAttempts{} attempts we report $\relk{\sweAttempts}$ in place of $\relk{5}$.
 
 \begin{table}[htbp]
   \centering
